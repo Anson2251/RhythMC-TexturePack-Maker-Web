@@ -3,6 +3,7 @@
 	"version": "0.0.1",
 	"description": "RhythMC 材质包制作器 Web 版",
 	"main": "index.html",
+	"license": "Apache-2.0",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
