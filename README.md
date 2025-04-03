@@ -25,7 +25,7 @@
 
 1. 确保安装 Node.js 16+
 2. 安装依赖: `npm install`
-3. 运行 `npm run buld`
+3. 运行 `npm run build`
 4. 构建产物位于 `dist` 目录下
 
 ## 注意事项
