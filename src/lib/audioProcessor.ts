@@ -5,8 +5,8 @@ export async function loadFfmpeg(ffmpeg: FFmpeg) {
 	if (!ffmpeg.loaded) {
 		console.info('Loading FFmpeg...')
 		await ffmpeg.load({
-			coreURL: (__IN_DEV__ ? "/public" : "") + "/ffmpeg/ffmpeg-core.js?url",
-			wasmURL: (__IN_DEV__ ? "/public" : "") + "/ffmpeg/ffmpeg-core.wasm?url"
+			coreURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.js?url",
+			wasmURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.wasm?url"
 		})
 	}
 }
