@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>RhythMC 材质包制作器</title>
+		<link rel="stylesheet" href="/src/style/main.less" />
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+	</head>
+	<body>
+		<h1>RhythMC 材质包制作器</h1>
+		<div class="parent-grid">
+			<div class="child-grid-1">
+				<div class="thumbnail-area-layout">
+					<div class="input-group" style="height: 100%">
+						<label for="thumbnailArea">
+							<i
+								class="fa-solid fa-image"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							上传材质包封面 (点击或拖拽图片):
+						</label>
+						<div class="thumbnail-area" id="thumbnailArea">
+							<div class="thumbnail-dropzone">
+								<img
+									id="thumbnailImg"
+									style="
+										max-width: 100%;
+										max-height: 100%;
+										display: none;
+									"
+								/>
+								<div class="thumbnail-placeholder">
+									<i
+										class="fas fa-image"
+										style="font-size: 48px"
+									></i>
+									<p>拖放图片设置缩略图</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="input-area">
+					<!-- Audio file input  -->
+					<div class="input-group">
+						<label for="audioFile">
+							<i
+								class="fas fa-file"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							音频文件:
+						</label>
+						<input type="file" id="audioFile" accept="audio/*" />
+					</div>
+
+					<!-- Song name input  -->
+					<div class="input-group">
+						<label for="songName">
+							<i
+								class="fas fa-music"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							歌曲名称:
+						</label>
+						<input
+							type="text"
+							id="songName"
+							placeholder="输入歌曲名"
+						/>
+					</div>
+
+					<!-- Composer name input  -->
+					<div class="input-group">
+						<label for="composerName">
+							<i
+								class="fas fa-user"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							曲师名称:
+						</label>
+						<input
+							type="text"
+							id="composerName"
+							placeholder="输入曲师名"
+						/>
+					</div>
+
+					<!-- Process button  -->
+					<button id="processBtn">
+						<i
+							class="fas fa-cogs"
+							style="vertical-align: middle; font-size: 18px"
+						></i>
+						开始制作
+					</button>
+				</div>
+			</div>
+			<div class="child-grid-2">
+				<div id="status" class="status-area">
+					<div class="progress-container">
+						<div class="progress-bar"></div>
+						<div class="progress-text">0%</div>
+					</div>
+					<div id="statusText" style="font-size: 12px">
+						正在初始化...
+					</div>
+				</div>
+
+				<!-- Output file download-->
+				<div class="download-area">
+					<div class="input-group">
+						<label for="result">
+							<i
+								class="fas fa-code"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							结果代码（复制到服务端）：
+						</label>
+						<div id="result" class="result-code"><i>待计算</i></div>
+					</div>
+					<div
+						class="input-group"
+						style="
+							flex: 1;
+							display: flex;
+							flex-wrap: nowrap;
+							flex-direction: column;
+							max-height: calc(100% - 7em);
+						"
+					>
+						<label for="result">
+							<i
+								class="fas fa-download"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							下载输出资源包：
+						</label>
+						<button id="downloadFull" style="display: none">
+							下载完整资源包
+						</button>
+						<div id="downloadCharterBtns">
+							<div class="charter-placeholder">
+								<i
+									class="fas fa-file-archive"
+									style="font-size: 24px"
+								></i>
+								<p>谱师包将在此处显示</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>
