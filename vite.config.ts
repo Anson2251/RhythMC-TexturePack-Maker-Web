@@ -3,6 +3,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
 	plugins: [],
+	base: "./",
 	define: {
 		__IN_DEV__: (process.env.NODE_ENV === "development")
 	},
