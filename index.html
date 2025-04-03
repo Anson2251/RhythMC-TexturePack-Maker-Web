@@ -85,6 +85,21 @@
 							placeholder="输入曲师名"
 						/>
 					</div>
+					<!-- AccessCode input  -->
+					<div class="input-group">
+						<label for="accessCode">
+							<i
+								class="fa-solid fa-key"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							授权码:
+						</label>
+						<input
+							type="text"
+							id="accessCode"
+							placeholder="输入授权码"
+						/>
+					</div>
 
 					<!-- Process button  -->
 					<button id="processBtn">
@@ -109,6 +124,7 @@
 
 				<!-- Output file download-->
 				<div class="download-area">
+					
 					<div class="input-group">
 						<label for="result">
 							<i
@@ -119,6 +135,8 @@
 						</label>
 						<div id="result" class="result-code"><i>待计算</i></div>
 					</div>
+									<!-- Log container -->
+				<div class="log-container"></div>
 					<div
 						class="input-group"
 						style="
@@ -129,30 +147,10 @@
 							max-height: calc(100% - 7em);
 						"
 					>
-						<label for="result">
-							<i
-								class="fas fa-download"
-								style="vertical-align: middle; font-size: 18px"
-							></i>
-							下载输出资源包：
-						</label>
-						<button id="downloadFull" style="display: none">
-							下载完整资源包
-						</button>
-						<div id="downloadCharterBtns">
-							<div class="charter-placeholder">
-								<i
-									class="fas fa-file-archive"
-									style="font-size: 24px"
-								></i>
-								<p>谱师包将在此处显示</p>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-
 		<script type="module" src="/src/main.ts"></script>
 	</body>
 </html>
