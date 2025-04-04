@@ -177,7 +177,7 @@ export class AppController {
 				return
 			}
 
-			if(location.hostname !== 'localhost' && accessCode !== 'pass') {
+			if(!(location.hostname === 'localhost' && accessCode === 'pass' && songName === 'test')) {
 				if (!accessCode) {
 					this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
 					return
@@ -343,6 +343,10 @@ export class AppController {
 
 		// Upload texture packs
 		this.statusDiv.textContent = '正在上传材质包...'
+		if(location.hostname === 'localhost' && songName === 'test') {
+			this.statusDiv.textContent = '测试模式，跳过上传'
+			return
+		}
 		this.updateProgress(0)
 		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player',charter_count)
 		this.updateProgress(50)

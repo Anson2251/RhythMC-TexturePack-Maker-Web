@@ -12,16 +12,18 @@ const multiThreadAvailable = (() => {
 
 let ffmpegLoading = false
 // const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.9/dist/esm'
-const baseURL = multiThreadAvailable ? 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.9/dist/esm' : __FFMPEG_BASE_URL_SINGLE_THREAD__
+const baseURL = multiThreadAvailable ? __FFMPEG_BASE_URL_MULTIPLE_THREAD__ : __FFMPEG_BASE_URL_SINGLE_THREAD__
 
 export async function loadFfmpeg(ffmpeg: FFmpeg) {
 	if (!ffmpeg.loaded && !ffmpegLoading) {
 		ffmpegLoading = true
 		console.info('Loading FFmpeg...')
 		await ffmpeg.load({
-            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-            workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+            coreURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.js?url`, import.meta.url).href, 'text/javascript'),
+            wasmURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.wasm?url`, import.meta.url).href, 'application/wasm'),
+            ...(multiThreadAvailable ? {
+				workerURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.worker.js?url`, import.meta.url).href, 'text/javascript'),
+			} : {})
         });
 	}
 }
