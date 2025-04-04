@@ -5,8 +5,8 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>RhythMC 材质包制作器</title>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-		<script type="module" crossorigin src="./assets/index-BTg0wXJZ.js"></script>
-		<link rel="stylesheet" crossorigin href="./assets/index-DkTCEBGx.css">
+		<script type="module" crossorigin src="./assets/index-BuqZ9tcm.js"></script>
+		<link rel="stylesheet" crossorigin href="./assets/index-B6CP6bME.css">
 	</head>
 	<body>
 		<h1>RhythMC 材质包制作器</h1>
@@ -86,6 +86,21 @@
 							placeholder="输入曲师名"
 						/>
 					</div>
+					<!-- AccessCode input  -->
+					<div class="input-group">
+						<label for="accessCode">
+							<i
+								class="fa-solid fa-key"
+								style="vertical-align: middle; font-size: 18px"
+							></i>
+							授权码:
+						</label>
+						<input
+							type="text"
+							id="accessCode"
+							placeholder="输入授权码"
+						/>
+					</div>
 
 					<!-- Process button  -->
 					<button id="processBtn">
@@ -110,6 +125,7 @@
 
 				<!-- Output file download-->
 				<div class="download-area">
+					
 					<div class="input-group">
 						<label for="result">
 							<i
@@ -120,6 +136,8 @@
 						</label>
 						<div id="result" class="result-code"><i>待计算</i></div>
 					</div>
+									<!-- Log container -->
+				<div class="log-container"></div>
 					<div
 						class="input-group"
 						style="
@@ -130,29 +148,9 @@
 							max-height: calc(100% - 7em);
 						"
 					>
-						<label for="result">
-							<i
-								class="fas fa-download"
-								style="vertical-align: middle; font-size: 18px"
-							></i>
-							下载输出资源包：
-						</label>
-						<button id="downloadFull" style="display: none">
-							下载完整资源包
-						</button>
-						<div id="downloadCharterBtns">
-							<div class="charter-placeholder">
-								<i
-									class="fas fa-file-archive"
-									style="font-size: 24px"
-								></i>
-								<p>谱师包将在此处显示</p>
-							</div>
-						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-
 	</body>
 </html>
