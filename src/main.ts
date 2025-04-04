@@ -5,11 +5,10 @@ import { AppController } from './components/appController'
 const audioFileInput = document.getElementById('audioFile') as HTMLInputElement
 const songNameInput = document.getElementById('songName') as HTMLInputElement
 const composerNameInput = document.getElementById('composerName') as HTMLInputElement
+const accessCodeInput = document.getElementById('accessCode') as HTMLInputElement
 const processBtn = document.getElementById('processBtn') as HTMLButtonElement
 const statusDiv = document.getElementById('statusText') as HTMLDivElement
 const resultDiv = document.getElementById('result') as HTMLDivElement
-const downloadFullBtn = document.getElementById('downloadFull') as HTMLButtonElement
-const downloadCharterBtns = document.getElementById('downloadCharterBtns') as HTMLDivElement
 
 
 document.body.onload = () => {
@@ -19,11 +18,10 @@ document.body.onload = () => {
 		audioFileInput,
 		songNameInput,
 		composerNameInput,
+		accessCodeInput,
 		processBtn,
 		statusDiv,
-		resultDiv,
-		downloadFullBtn,
-		downloadCharterBtns
+		resultDiv
 	)
 }
 

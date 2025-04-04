@@ -20,11 +20,10 @@ export class AppController {
 		private audioFileInput: HTMLInputElement,
 		private songNameInput: HTMLInputElement,
 		private composerNameInput: HTMLInputElement,
+		private accessCodeInput : HTMLInputElement,
 		private processBtn: HTMLButtonElement,
 		private statusDiv: HTMLDivElement,
-		private resultDiv: HTMLDivElement,
-		private downloadFullBtn: HTMLButtonElement,
-		private downloadCharterBtns: HTMLDivElement
+		private resultDiv: HTMLDivElement
 	) {
 		console.info("initialising app controller")
 		this.thumbnailImg = document.getElementById('thumbnailImg') as HTMLImageElement
@@ -32,7 +31,6 @@ export class AppController {
 		this.progressBar = this.statusDiv.parentElement!.querySelector('.progress-bar')!
 		this.progressText = this.statusDiv.parentElement!.querySelector('.progress-text')!
 		this.setupEventListeners()
-
 		this.ffmpeg.on("progress", ({ progress }) => {
 			const percent = Math.round(Math.min(Math.max(0, progress * 100), 100))
 			this.updateProgress(percent)
@@ -92,9 +90,36 @@ export class AppController {
 		percent = Math.round(Math.min(Math.max(0, percent), 100))
 		this.progressBar.style.width = `${percent}%`
 		this.progressText.textContent = `${percent}%`
+		const logContainer = this.resultDiv.parentElement?.parentElement?.querySelector('.log-container')
+		if (logContainer) {
+			const timestamp = new Date().toLocaleTimeString()
+			const statusText = this.statusDiv.textContent || ''
+			logContainer.innerHTML += `<span data-timestamp>[${timestamp}]</span> <span data-status>${statusText}</span> <span data-percent>(${percent}%)</span>\n`
+			logContainer.scrollTop = logContainer.scrollHeight
+		}
 	}
 
+
 	private setupEventListeners() {
+		// Setup result div click to copy
+		this.resultDiv.addEventListener('click', () => {
+			if (this.resultDiv.textContent) {
+				const originalText = this.resultDiv.textContent
+				if(originalText == "待计算")return
+				navigator.clipboard.writeText(originalText)
+					.then(() => {
+						this.resultDiv.textContent = '已复制到剪贴板'
+						setTimeout(() => {
+							this.resultDiv.textContent = originalText
+						}, 1000)
+					})
+					.catch(err => {
+						console.error('复制失败:', err)
+						this.statusDiv.textContent = '复制失败'
+					})
+			}
+		})
+
 		// Setup thumbnail drag and drop
 		this.thumbnailArea.addEventListener('dragover', (e) => {
 			e.preventDefault()
@@ -140,9 +165,15 @@ export class AppController {
 			const file = this.audioFileInput.files[0]
 			const songName = this.songNameInput.value
 			const composerName = this.composerNameInput.value
+			const accessCode = this.accessCodeInput.value
 
 			if (!songName || !composerName) {
 				this.statusDiv.textContent = '请输入歌曲名称和曲师名称'
+				return
+			}
+			
+			if (!accessCode) {
+				this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
 				return
 			}
 
@@ -165,20 +196,45 @@ export class AppController {
 		}
 	}
 
+	private async uploadTexturePack(file: Blob, endpoint: string, part?: number): Promise<string> {
+		const formData = new FormData()
+		formData.append('file', file)
+		if (part) {
+			formData.append('part', part.toString())
+		}
+
+		try {
+			const response = await fetch(`http://localhost:8200/api/texture/${endpoint}`, {
+				method: 'POST',
+				headers: {
+					'X-Auth-Token': this.accessCodeInput.value
+				},
+				body: formData
+			})
+
+			if (!response.ok) {
+				this.resultDiv.textContent=`上传失败: ${response.status}`
+			}
+
+			if (endpoint === 'player') {
+				return await response.text()
+			}
+			return 'Upload successful'
+		} catch (error) {
+			console.error('上传错误:', error)
+			throw error
+		}
+	}
+
 	private async processAudio(file: File, songName: string, composerName: string) {
 		if (!this.ffmpeg.loaded) await this.ffmpeg.load()
-		const placeholder = this.downloadCharterBtns.querySelector('.charter-placeholder') as HTMLDivElement
 		this.resultDiv.innerHTML = "<i>待计算</i>"
-		placeholder.style.display = 'inherit'
-		this.downloadFullBtn.style.display = 'none'
-		this.downloadFullBtn.onclick = () => { }
-		this.downloadCharterBtns.querySelectorAll('button').forEach(btn => btn.remove())
 
 		this.updateProgress(0)
 
 		const needConversion = !file.type.endsWith('ogg')
 		let step = 1
-		const totalSteps = needConversion ? 4 : 3
+		const totalSteps = needConversion ? 5 : 4
 
 		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在${needConversion ? "转换" : "处理"}音频...`
 		const { mainAudio, getSegment } = await processAudioWithFFmpeg(this.ffmpeg, file, () => {
@@ -191,20 +247,25 @@ export class AppController {
 
 		step++
 		this.statusDiv.textContent = `(${step}/${totalSteps})正在计算音频时长...`
+		this.updateProgress(0)
 		const duration = await getAudioDuration(file)
 		const length = Math.floor(duration * 20) // Convert to ticks
-
+		this.updateProgress(100)
+		step++
+		this.statusDiv.textContent = `(${step}/${totalSteps})正在生成材质包...`
+		this.updateProgress(0)
 		// Create full pack
 		const fullPack: Record<string, Uint8Array> = {
 			'assets/minecraft/sounds/mob/horse/death.ogg': mainAudio,
 			'pack.mcmeta': createPackMeta(songName, composerName)
 		}
+		this.updateProgress(10)
 
 		// Add thumbnail if provided
 		if (this.thumbnailFile) {
 			fullPack['pack.png'] = new Uint8Array(await this.thumbnailFile.arrayBuffer())
 		}
-
+		this.updateProgress(30)
 		// Create charter packs
 		const charterPacks: Record<string, Record<string, Uint8Array>> = {}
 		let segmentCount = 0
@@ -225,39 +286,49 @@ export class AppController {
 			charterPacks[`part-${partNum}`] = charterPack
 			segmentCount++
 		}
-
+		this.updateProgress(60)
 		// Create ZIP files
 		step++
 		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在创建ZIP文件...`
 		this.fullZipBlob = await createZip(fullPack, `${songName}.zip`)
+		let charter_count = Object.entries(charterPacks).length
 		const partZips = await Promise.all(
 			Object.entries(charterPacks).map(([name, files]) =>
-				createZip(files, `${name}.zip`)
+				createZip(files, `${name}.zip`),
 			)
 		)
-
-		// Update UI
-		this.downloadFullBtn.style.display = 'block'
-		this.downloadFullBtn.onclick = () => downloadBlob(this.fullZipBlob!, `${songName}.zip`)
-
-
-		placeholder.style.display = 'none'
-
 		partZips.forEach((zip, i) => {
 			const partNum = i + 1
+			this.statusDiv.textContent = `(${step}/${totalSteps}) 正在创建ZIP文件... (${i+1}/${charter_count})`
+			this.updateProgress(60+40/charter_count*(i+1))
 			this.charterZipBlobs[`part-${partNum}`] = zip
-			const btn = document.createElement('button')
-			btn.textContent = `下载谱师包 ${partNum}`
-			btn.onclick = () => downloadBlob(zip, `part-${partNum}.zip`)
-			this.downloadCharterBtns.appendChild(btn)
 		})
+		this.updateProgress(100)
 
+
+		// Upload texture packs
+		this.statusDiv.textContent = '正在上传材质包...'
+		this.updateProgress(0)
+		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player')
+		this.updateProgress(50)
+		// Upload charter packs
+		await Promise.all(
+			Object.entries(this.charterZipBlobs).map(([name, blob]) => {
+				const partNum = parseInt(name.split('-')[1])
+				this.statusDiv.textContent = `正在上传材质包... ${partNum}/${charter_count}`
+				this.updateProgress(50+ 50/charter_count*partNum)
+				return this.uploadTexturePack(blob, 'charter', partNum)
+			})
+		)
 		// Output result
 		const encoder = new TextEncoder()
 		const encodedName = btoa(String.fromCharCode(...encoder.encode(songName)))
-		const result = `${await getFileHash(this.fullZipBlob)}:${length}:${encodedName}`
+		const result = `${hash}:${length}:${encodedName}`
 
 		this.resultDiv.textContent = result
-		this.statusDiv.textContent = '处理完成!'
+		this.statusDiv.textContent = `使用 /editor create ${result} 来创建该谱面。`
+		this.updateProgress(100)
+		this.statusDiv.textContent = '处理并上传完成!'
+		this.updateProgress(100)
 	}
 }
