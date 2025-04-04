@@ -171,7 +171,7 @@ export class AppController {
 				this.statusDiv.textContent = '请输入歌曲名称和曲师名称'
 				return
 			}
-			
+
 			if (!accessCode) {
 				this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
 				return
@@ -204,7 +204,7 @@ export class AppController {
 		}
 
 		try {
-			const response = await fetch(`http://localhost:8200/api/texture/${endpoint}`, {
+			const response = await fetch(`${__BACKEND_BASE_URL__}/api/texture/${endpoint}`, {
 				method: 'POST',
 				headers: {
 					'X-Auth-Token': this.accessCodeInput.value

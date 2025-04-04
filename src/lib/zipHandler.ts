@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { MD5, lib } from 'crypto-js'
+import { SHA1, lib } from 'crypto-js'
 
 type PackFile = Uint8Array
 type PackFiles = Record<string, PackFile>
@@ -8,7 +8,7 @@ export function createPackMeta(songName: string, composerName: string): Uint8Arr
 	const meta = {
 		pack: {
 			pack_format: 22,
-			description: `§bRhythMC §3韵律方块 §6音乐资源包\n§c§o${songName} §f- §e${composerName}`,
+			description: `§bRhythMC §3韵律方块 d音乐资源包\n§c§o${songName} §f- §e${composerName}`,
 			supported_formats: { min_inclusive: 22, max_inclusive: 99 }
 		}
 	}
@@ -46,7 +46,7 @@ export async function getFileHash(file: Blob): Promise<string> {
 		catch {
 			// Fallback to crypto-js
 			const arrayBuffer = await file.arrayBuffer()
-			const wordArray = MD5(lib.WordArray.create(arrayBuffer as any))
+			const wordArray = SHA1(lib.WordArray.create(arrayBuffer as any))
 			return wordArray.toString()
 		}
 	} catch (error) {

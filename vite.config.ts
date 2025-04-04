@@ -1,11 +1,16 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
+import dotenv from 'dotenv'
+
+dotenv.config()
+const backendBaseUrl = process.env.BACKEND_BASE_URL  ?? "http://localhost:8200"
 
 export default defineConfig({
 	plugins: [],
 	base: "./",
 	define: {
-		__IN_DEV__: (process.env.NODE_ENV === "development")
+		__IN_DEV__: (process.env.NODE_ENV === "development"),
+		__BACKEND_BASE_URL__: JSON.stringify(backendBaseUrl)
 	},
 	resolve: {
 		alias: {
