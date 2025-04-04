@@ -176,7 +176,10 @@ export class AppController {
 				this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
 				return
 			}
-
+			if(! await this.verifyKey(accessCode)) {
+				this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
+				return
+			}
 			try {
 				this.statusDiv.textContent = '正在处理...'
 				await this.processAudio(file, songName, composerName)
@@ -195,8 +198,31 @@ export class AppController {
 			this.handleThumbnailFile(new File([blob], 'cover.png', { type: 'image/png' }))
 		}
 	}
-
-	private async uploadTexturePack(file: Blob, endpoint: string, part?: number): Promise<string> {
+	private async verifyKey(accessCode: string): Promise<boolean> {
+		try {
+			this.statusDiv.textContent = `正在验证密钥...`
+			this.updateProgress(0)
+			const response = await fetch(`${__BACKEND_BASE_URL__}/api/verify`, {
+				method: 'GET',
+				headers: {
+					'X-Auth-Token': accessCode
+				}
+			})
+			if (!(response.status == 200)) {
+				this.statusDiv.textContent = `验证失败: ${response.status}`
+				this.updateProgress(0)
+				return false
+			}
+			this.statusDiv.textContent = `验证成功!`
+			this.updateProgress(100)
+			return true
+		} catch (error) {
+			this.statusDiv.textContent = `验证失败: ${error}`
+			this.updateProgress(0)
+			return false
+		}
+	}
+	private async uploadTexturePack(file: Blob, endpoint: string, part?: number, hash?: string): Promise<string> {
 		const formData = new FormData()
 		formData.append('file', file)
 		if (part) {
@@ -207,7 +233,9 @@ export class AppController {
 			const response = await fetch(`${__BACKEND_BASE_URL__}/api/texture/${endpoint}`, {
 				method: 'POST',
 				headers: {
-					'X-Auth-Token': this.accessCodeInput.value
+					'X-Auth-Token': this.accessCodeInput.value,
+					// Contains Hash? if Yes add Hash to header
+					'X-PlayerPack-Hash': hash || ''
 				},
 				body: formData
 			})
@@ -309,7 +337,7 @@ export class AppController {
 		// Upload texture packs
 		this.statusDiv.textContent = '正在上传材质包...'
 		this.updateProgress(0)
-		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player')
+		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player',charter_count)
 		this.updateProgress(50)
 		// Upload charter packs
 		await Promise.all(
@@ -317,7 +345,7 @@ export class AppController {
 				const partNum = parseInt(name.split('-')[1])
 				this.statusDiv.textContent = `正在上传材质包... ${partNum}/${charter_count}`
 				this.updateProgress(50+ 50/charter_count*partNum)
-				return this.uploadTexturePack(blob, 'charter', partNum)
+				return this.uploadTexturePack(blob, 'charter', partNum, hash)
 			})
 		)
 		// Output result
