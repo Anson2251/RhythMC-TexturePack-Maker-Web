@@ -1,13 +1,28 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
-import { fetchFile } from '@ffmpeg/util'
+import { fetchFile, toBlobURL } from '@ffmpeg/util'
+
+const multiThreadAvailable = (() => {
+  try {
+    return typeof SharedArrayBuffer !== 'undefined' &&
+           window.crossOriginIsolated
+  } catch {
+    return false
+  }
+})()
+
+let ffmpegLoading = false
+// const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.9/dist/esm'
+const baseURL = multiThreadAvailable ? 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.9/dist/esm' : __FFMPEG_BASE_URL_SINGLE_THREAD__
 
 export async function loadFfmpeg(ffmpeg: FFmpeg) {
-	if (!ffmpeg.loaded) {
+	if (!ffmpeg.loaded && !ffmpegLoading) {
+		ffmpegLoading = true
 		console.info('Loading FFmpeg...')
 		await ffmpeg.load({
-			coreURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.js?url",
-			wasmURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.wasm?url"
-		})
+            coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+            wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            workerURL: await toBlobURL(`${baseURL}/ffmpeg-core.worker.js`, 'text/javascript'),
+        });
 	}
 }
 

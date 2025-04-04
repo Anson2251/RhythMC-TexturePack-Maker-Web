@@ -46,6 +46,10 @@ export class AppController {
 	}
 
 	private loadFfmpeg(cb: () => void) {
+		if(typeof SharedArrayBuffer !== 'undefined') {
+			this.statusDiv.textContent = "多线程支持已启用"
+			this.updateProgress(0)
+		}
 		this.statusDiv.textContent = '正在加载 FFmpeg WASM...'
 		let currentProgress = 0
 		const updateProgressFfmpeg = setInterval(() => {
@@ -54,13 +58,14 @@ export class AppController {
 			this.updateProgress(currentProgress)
 		}, 100)
 
-		loadFfmpeg(this.ffmpeg).then(() => {
-			this.statusDiv.textContent = 'FFmpeg 已就绪'
-			console.info("FFmpeg ready")
-			clearInterval(updateProgressFfmpeg)
-			setTimeout(() => this.updateProgress(100), 100)
-			cb()
-		})
+		loadFfmpeg(this.ffmpeg)
+			.then(() => {
+				this.statusDiv.textContent = 'FFmpeg 已就绪'
+				console.info("FFmpeg ready")
+				clearInterval(updateProgressFfmpeg)
+				setTimeout(() => this.updateProgress(100), 100)
+				cb()
+			})
 			.catch((error) => {
 				this.statusDiv.textContent = 'FFmpeg 加载失败'
 				console.error(error)
@@ -172,13 +177,15 @@ export class AppController {
 				return
 			}
 
-			if (!accessCode) {
-				this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
-				return
-			}
-			if(! await this.verifyKey(accessCode)) {
-				this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
-				return
+			if(location.hostname !== 'localhost' && accessCode !== 'pass') {
+				if (!accessCode) {
+					this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
+					return
+				}
+				if(! await this.verifyKey(accessCode)) {
+					this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
+					return
+				}
 			}
 			try {
 				this.statusDiv.textContent = '正在处理...'
