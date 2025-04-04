@@ -5,8 +5,8 @@ export async function loadFfmpeg(ffmpeg: FFmpeg) {
 	if (!ffmpeg.loaded) {
 		console.info('Loading FFmpeg...')
 		await ffmpeg.load({
-			coreURL: "https://s4.zstatic.net/ajax/libs/ffmpeg-core/0.12.10/esm/ffmpeg-core.min.js",
-			wasmURL: "https://cdn.frkovo.cn/ffmpeg-core.wasm"
+			coreURL: "https://s4.zstatic.net/ajax/libs/ffmpeg-core/0.12.10/umd/ffmpeg-core.min.js",
+			wasmURL: "https://unpkg.zhimg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm"
 		})
 	}
 }
