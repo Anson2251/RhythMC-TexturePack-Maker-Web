@@ -365,7 +365,8 @@ export class AppController {
 		// Output result
 		const encoder = new TextEncoder()
 		const encodedName = btoa(String.fromCharCode(...encoder.encode(songName)))
-		const result = `${hash}:${length}:${encodedName}`
+		const encodedComposer = btoa(String.fromCharCode(...encoder.encode(composerName)))
+		const result = `${hash}:${length}:${encodedName}:${encodedComposer}`
 
 		this.resultDiv.textContent = result
 		this.statusDiv.textContent = `使用 /editor create ${result} 来创建该谱面。`
