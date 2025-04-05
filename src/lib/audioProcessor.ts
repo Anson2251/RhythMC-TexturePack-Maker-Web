@@ -1,13 +1,51 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
+import { isRelativePath, toBlobURL } from '@/lib/inet'
 
-export async function loadFfmpeg(ffmpeg: FFmpeg) {
-	if (!ffmpeg.loaded) {
+const multiThreadAvailable = (() => {
+  try {
+    return typeof SharedArrayBuffer !== 'undefined' &&
+           window.crossOriginIsolated
+  } catch {
+    return false
+  }
+})()
+
+let ffmpegLoading = false
+// let baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core-mt@0.12.9/dist/esm'
+let baseURL = multiThreadAvailable ? __FFMPEG_BASE_URL_MULTIPLE_THREAD__ : __FFMPEG_BASE_URL_SINGLE_THREAD__
+if(isRelativePath(baseURL)) {
+    baseURL = new URL(baseURL, import.meta.url).href
+}
+console.log(baseURL, `${baseURL}/ffmpeg-core.js?url`)
+export async function loadFfmpeg(ffmpeg: FFmpeg, progress: ((progress: number) => void)) {
+	if (!ffmpeg.loaded && !ffmpegLoading) {
+		ffmpegLoading = true
 		console.info('Loading FFmpeg...')
+		let progressNum = 0
+
 		await ffmpeg.load({
-			coreURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.js?url",
-			wasmURL: (__IN_DEV__ ? "/public" : "..") + "/ffmpeg/ffmpeg-core.wasm?url"
-		})
+            coreURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.js?url`).href, 'text/javascript', false, (event) => {
+				console.log(event.received / event.total)
+				progress((progressNum + event.received / event.total) / (multiThreadAvailable ? 3 : 2))
+				if(event.done) {
+					progressNum += 1
+				}
+			}),
+            wasmURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.wasm?url`).href, 'application/wasm', true, (event) => {
+				console.log(event.received / event.total)
+				progress((progressNum + event.received / event.total) / (multiThreadAvailable ? 3 : 2))
+				if(event.done) {
+					progressNum += 1
+				}
+			}),
+            ...(multiThreadAvailable ? {
+				workerURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.worker.js?url`).href, 'text/javascript', true, (event) => {
+					console.log(event.received / event.total)
+					progress((progressNum + event.received / event.total) / 3)
+				}),
+			} : {})
+        });
 	}
 }
 

@@ -1,7 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile } from '@ffmpeg/util'
 import { processAudioWithFFmpeg, getAudioDuration, loadFfmpeg, extractCoverArt } from '../lib/audioProcessor'
-import { createPackMeta, createZip, downloadBlob, getFileHash } from '../lib/zipHandler'
+import { createPackMeta, createZip } from '../lib/zipHandler'
 
 export class AppController {
 	private ffmpeg = new FFmpeg()
@@ -15,6 +15,7 @@ export class AppController {
 	private thumbnailImg: HTMLImageElement
 	private thumbnailArea: HTMLDivElement
 	private thumbnailFile: File | null = null
+	private ffmpegLoading = false
 
 	constructor(
 		private audioFileInput: HTMLInputElement,
@@ -38,6 +39,7 @@ export class AppController {
 
 		this.loadFfmpeg(async () => {
 			if (audioFileInput.files && audioFileInput.files.length > 0) {
+				this.statusDiv.textContent = '检测到音频文件'
 				this.ffmpeg.writeFile('input', await fetchFile(this.audioFileInput.files![0]))
 				console.log('Previously added audio file detected, attempting to handle cover art...')
 				this.handleMusicFileCover()
@@ -46,26 +48,25 @@ export class AppController {
 	}
 
 	private loadFfmpeg(cb: () => void) {
-		this.statusDiv.textContent = '正在加载 FFmpeg WASM...'
-		let currentProgress = 0
-		const updateProgressFfmpeg = setInterval(() => {
-			if (currentProgress >= 90) clearInterval(updateProgressFfmpeg)
-			currentProgress += 1
-			this.updateProgress(currentProgress)
-		}, 100)
+		if(this.ffmpegLoading) return;
+		this.ffmpegLoading = true;
+		if(typeof SharedArrayBuffer !== 'undefined') {
+			this.statusDiv.textContent = "多线程支持已启用"
+			this.updateProgress(0)
+		}
+		this.statusDiv.textContent = '正在加载 FFmpeg WASM 的相关组件...'
 
-		loadFfmpeg(this.ffmpeg).then(() => {
-			this.statusDiv.textContent = 'FFmpeg 已就绪'
-			console.info("FFmpeg ready")
-			clearInterval(updateProgressFfmpeg)
-			setTimeout(() => this.updateProgress(100), 100)
-			cb()
-		})
+		loadFfmpeg(this.ffmpeg, (p) => this.updateProgress(p * 100, false))
+			.then(() => {
+				this.statusDiv.textContent = 'FFmpeg 已就绪'
+				console.info("FFmpeg ready")
+				setTimeout(() => this.updateProgress(100))
+				cb()
+			})
 			.catch((error) => {
 				this.statusDiv.textContent = 'FFmpeg 加载失败'
 				console.error(error)
-				clearInterval(updateProgressFfmpeg)
-				setTimeout(() => this.updateProgress(0), 100)
+				setTimeout(() => this.updateProgress(0))
 			})
 	}
 
@@ -86,12 +87,12 @@ export class AppController {
 		reader.readAsDataURL(file)
 	}
 
-	private updateProgress(percent: number) {
+	private updateProgress(percent: number, log = true) {
 		percent = Math.round(Math.min(Math.max(0, percent), 100))
 		this.progressBar.style.width = `${percent}%`
 		this.progressText.textContent = `${percent}%`
 		const logContainer = this.resultDiv.parentElement?.parentElement?.querySelector('.log-container')
-		if (logContainer) {
+		if (logContainer && log) {
 			const timestamp = new Date().toLocaleTimeString()
 			const statusText = this.statusDiv.textContent || ''
 			logContainer.innerHTML += `<span data-timestamp>[${timestamp}]</span> <span data-status>${statusText}</span> <span data-percent>(${percent}%)</span>\n`
@@ -172,13 +173,15 @@ export class AppController {
 				return
 			}
 
-			if (!accessCode) {
-				this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
-				return
-			}
-			if(! await this.verifyKey(accessCode)) {
-				this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
-				return
+			if(!(location.hostname === 'localhost' && accessCode === 'pass' && songName === 'test')) {
+				if (!accessCode) {
+					this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
+					return
+				}
+				if(! await this.verifyKey(accessCode)) {
+					this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
+					return
+				}
 			}
 			try {
 				this.statusDiv.textContent = '正在处理...'
@@ -191,12 +194,19 @@ export class AppController {
 	}
 
 	private async handleMusicFileCover() {
+		this.statusDiv.textContent = '正在处理封面...'
+		if (!this.audioFileInput.files || this.audioFileInput.files.length === 0) {
+			this.statusDiv.textContent = '请选择一个音频文件'
+			return
+		}
 		this.ffmpeg.writeFile('input', await fetchFile(this.audioFileInput.files![0]))
 		const coverArt = await extractCoverArt(this.ffmpeg)
 		if (coverArt) {
 			const blob = new Blob([coverArt], { type: 'image/png' })
 			this.handleThumbnailFile(new File([blob], 'cover.png', { type: 'image/png' }))
 		}
+		this.statusDiv.textContent = '处理完成!'
+		this.updateProgress(100)
 	}
 	private async verifyKey(accessCode: string): Promise<boolean> {
 		try {
@@ -336,6 +346,10 @@ export class AppController {
 
 		// Upload texture packs
 		this.statusDiv.textContent = '正在上传材质包...'
+		if(location.hostname === 'localhost' && songName === 'test') {
+			this.statusDiv.textContent = '测试模式，跳过上传'
+			return
+		}
 		this.updateProgress(0)
 		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player',charter_count)
 		this.updateProgress(50)
