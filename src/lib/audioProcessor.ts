@@ -26,14 +26,12 @@ export async function loadFfmpeg(ffmpeg: FFmpeg, progress: ((progress: number) =
 
 		await ffmpeg.load({
             coreURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.js?url`).href, 'text/javascript', false, (event) => {
-				console.log(event.received / event.total)
 				progress((progressNum + event.received / event.total) / (multiThreadAvailable ? 3 : 2))
 				if(event.done) {
 					progressNum += 1
 				}
 			}),
             wasmURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.wasm?url`).href, 'application/wasm', true, (event) => {
-				console.log(event.received / event.total)
 				progress((progressNum + event.received / event.total) / (multiThreadAvailable ? 3 : 2))
 				if(event.done) {
 					progressNum += 1
@@ -41,7 +39,6 @@ export async function loadFfmpeg(ffmpeg: FFmpeg, progress: ((progress: number) =
 			}),
             ...(multiThreadAvailable ? {
 				workerURL: await toBlobURL(new URL(`${baseURL}/ffmpeg-core.worker.js?url`).href, 'text/javascript', true, (event) => {
-					console.log(event.received / event.total)
 					progress((progressNum + event.received / event.total) / 3)
 				}),
 			} : {})
