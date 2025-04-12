@@ -1,6 +1,8 @@
-    # RhythMC 材质包制作工具
+# RhythMC 材质包制作工具
 
-一个基于网页的 RhythMC 材质包制作工具，帮助玩家快速创建和定制游戏材质包。
+一个基于网页的 RhythMC 材质包制作工具
+
+---
 
 ## 功能特性
 
@@ -11,8 +13,18 @@
 
 - 前端框架: 原生 HTML + Vite + TypeScript
 - 样式: LESS 预处理器
-- 音频处理: FFmpeg
+- 音频处理: ffmpeg.wasm
 - 文件打包: JSZip
+
+## 如何贡献
+
+非常欢迎您的加入！提一个 Issue 或者提交一个 Pull Request
+
+Pull Request:
+
+1. Fork 代码!
+2. 提交您的修改: `git commit -m 'feat(function): add xxxxx'`
+3. 提交 Pull Request
 
 ## 开发说明
 
@@ -30,7 +42,7 @@
 
 ## 注意事项
 
-- 部分音频处理功能需要浏览器支持 WebAssembly
+- 音频处理功能需要浏览器支持 WebAssembly
 - 生成的材质包需手动使用`结果代码`发送到服务端进行导入
 
 ---

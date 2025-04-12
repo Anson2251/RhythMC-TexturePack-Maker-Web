@@ -18,7 +18,7 @@ body {
 	top: 4em;
 	left: 16px;
 	right: 16px;
-	bottom: 16px;
+	bottom: 64px;
 
 	.child-grid-1 {
 		display: grid;
@@ -169,4 +169,35 @@ body {
 			letter-spacing: 0.25px;
 		}
 	}
+}
+
+.footer-container {
+	text-align: center;
+	font-size: 0.9rem;
+	position: fixed;
+	bottom: 8px;
+	width: 100%;
+
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+}
+
+.copyright-box, .contributors-box {
+	margin-top: 0.5rem;
+	font-size: 0.8rem;
+	color: #666;
+}
+
+.contributors-box {
+	padding-left: 1rem;
+}
+
+.github-repo {
+	position: fixed;
+	right: 0;
+	top: 0;
+
+	padding: 24px;
+	font-size: 1.1rem;
 }
