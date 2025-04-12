@@ -284,13 +284,13 @@ export class AppController {
 		this.updateProgress(100)
 
 		step++
-		this.statusDiv.textContent = `(${step}/${totalSteps})正在计算音频时长...`
+		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在计算音频时长...`
 		this.updateProgress(0)
-		const duration = await getAudioDuration(file)
+		const duration = await getAudioDuration(file, this.ffmpeg)
 		const length = Math.floor(duration * 20) // Convert to ticks
 		this.updateProgress(100)
 		step++
-		this.statusDiv.textContent = `(${step}/${totalSteps})正在生成材质包...`
+		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在生成材质包...`
 		this.updateProgress(0)
 		// Create full pack
 		const fullPack: Record<string, Uint8Array> = {

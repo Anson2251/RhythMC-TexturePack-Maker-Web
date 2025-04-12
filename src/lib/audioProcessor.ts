@@ -128,13 +128,21 @@ export async function processAudioWithFFmpeg(ffmpeg: FFmpeg, file: File, cb?: (a
 	}
 }
 
-export async function getAudioDuration(file: File): Promise<number> {
-	return new Promise((resolve) => {
-		const audio = new Audio()
-		audio.src = URL.createObjectURL(file)
-		audio.onloadedmetadata = () => {
-			resolve(audio.duration)
-			URL.revokeObjectURL(audio.src)
-		}
-	})
+export async function getAudioDuration(file: File, ffmpeg: FFmpeg): Promise<number> {
+    await ffmpeg.writeFile('input', await fetchFile(file));
+    await ffmpeg.ffprobe([
+        '-i', 'input',
+        '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        '-o', 'duration.txt'
+    ]);
+    const output = await ffmpeg.readFile('duration.txt') as Uint8Array;
+    const duration = parseFloat(new TextDecoder().decode(output));
+	console.log('audio duration:', duration)
+    if (!isNaN(duration)) {
+		await ffmpeg.writeFile('input', await fetchFile(file));
+        return duration;
+    }
+    throw new Error('Could not determine audio duration');
 }
