@@ -141,7 +141,6 @@ export async function getAudioDuration(file: File, ffmpeg: FFmpeg): Promise<numb
     const duration = parseFloat(new TextDecoder().decode(output));
 	console.log('audio duration:', duration)
     if (!isNaN(duration)) {
-		await ffmpeg.writeFile('input', await fetchFile(file));
         return duration;
     }
     throw new Error('Could not determine audio duration');
