@@ -17,11 +17,15 @@ export class AppController {
 	private thumbnailFile: File | null = null
 	private ffmpegLoading = false
 
+	private step = 0
+	private totalSteps = 0
+	private audioFile: File | null = null
+
 	constructor(
 		private audioFileInput: HTMLInputElement,
 		private songNameInput: HTMLInputElement,
 		private composerNameInput: HTMLInputElement,
-		private accessCodeInput : HTMLInputElement,
+		private accessCodeInput: HTMLInputElement,
 		private processBtn: HTMLButtonElement,
 		private statusDiv: HTMLDivElement,
 		private resultDiv: HTMLDivElement
@@ -48,9 +52,9 @@ export class AppController {
 	}
 
 	private loadFfmpeg(cb: () => void) {
-		if(this.ffmpegLoading) return;
+		if (this.ffmpegLoading) return;
 		this.ffmpegLoading = true;
-		if(typeof SharedArrayBuffer !== 'undefined') {
+		if (typeof SharedArrayBuffer !== 'undefined') {
 			this.statusDiv.textContent = "多线程支持已启用"
 			this.updateProgress(0)
 		}
@@ -95,7 +99,20 @@ export class AppController {
 		if (logContainer && log) {
 			const timestamp = new Date().toLocaleTimeString()
 			const statusText = this.statusDiv.textContent || ''
-			logContainer.innerHTML += `<span data-timestamp>[${timestamp}]</span> <span data-status>${statusText}</span> <span data-percent>(${percent}%)</span>\n`
+			const logs = logContainer.innerHTML.split("\n")
+
+			if (logs.length > 0) {
+				const regexp = /<span data-status(=|")*>(.*?)<\/span>/
+
+				const match = logs[logs.length - 1].match(regexp)
+				if (match) {
+					const oldStatusText = match[2]
+					if (oldStatusText === statusText) logs.pop()
+				}
+			}
+
+			logs.push(`<span data-timestamp>[${timestamp}]</span> <span data-status>${statusText}</span> <span data-percent>(${percent}%)</span>`)
+			logContainer.innerHTML = logs.join("\n")
 			logContainer.scrollTop = logContainer.scrollHeight
 		}
 	}
@@ -106,7 +123,7 @@ export class AppController {
 		this.resultDiv.addEventListener('click', () => {
 			if (this.resultDiv.textContent) {
 				const originalText = this.resultDiv.textContent
-				if(originalText == "待计算")return
+				if (originalText === "待计算") return
 				navigator.clipboard.writeText(originalText)
 					.then(() => {
 						this.resultDiv.textContent = '已复制到剪贴板'
@@ -173,13 +190,13 @@ export class AppController {
 				return
 			}
 
-			if(!(location.hostname === 'localhost' && accessCode === 'pass' && songName === 'test')) {
+			if (!(location.hostname === 'localhost' && accessCode === 'pass' && songName === 'test')) {
 				if (!accessCode) {
-					this.statusDiv.textContent = '请向Frk申请制作材质包权限。'
+					this.statusDiv.textContent = '请向 Frk 申请制作材质包权限'
 					return
 				}
-				if(! await this.verifyKey(accessCode)) {
-					this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确。'
+				if (! await this.verifyKey(accessCode)) {
+					this.statusDiv.textContent = '密钥验证失败，请检查密钥是否正确'
 					return
 				}
 			}
@@ -208,6 +225,7 @@ export class AppController {
 		this.statusDiv.textContent = '处理完成!'
 		this.updateProgress(100)
 	}
+
 	private async verifyKey(accessCode: string): Promise<boolean> {
 		try {
 			this.statusDiv.textContent = `正在验证密钥...`
@@ -251,7 +269,7 @@ export class AppController {
 			})
 
 			if (!response.ok) {
-				this.resultDiv.textContent=`上传失败: ${response.status}`
+				this.resultDiv.textContent = `上传失败: ${response.status}`
 			}
 
 			if (endpoint === 'player') {
@@ -271,28 +289,26 @@ export class AppController {
 		this.updateProgress(0)
 
 		const needConversion = !file.type.endsWith('ogg')
-		let step = 1
-		const totalSteps = needConversion ? 5 : 4
+		this.step = 1
+		this.totalSteps = needConversion ? 5 : 4
 
-		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在${needConversion ? "转换" : "处理"}音频...`
+		this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在${needConversion ? "转换" : "处理"}音频...`
 		const { mainAudio, getSegment } = await processAudioWithFFmpeg(this.ffmpeg, file, () => {
 			if (!needConversion) return;
-			step++;
-			this.statusDiv.textContent = `(${step}/${totalSteps}) 正在处理音频...`
+			this.step++;
+			this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在处理音频...`
 		})
-
 		this.updateProgress(100)
 
-		step++
-		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在计算音频时长...`
+		this.audioFile = new File([mainAudio], file.name, { type: 'audio/ogg' });
+
+		this.step++
+		const length = await this.getAudioDuration()
+		this.step++
+
+		this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在生成材质包...`
 		this.updateProgress(0)
-		const duration = await getAudioDuration(file, this.ffmpeg)
-		const length = Math.floor(duration * 20) // Convert to ticks
-		this.updateProgress(100)
-		step++
-		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在生成材质包...`
-		this.updateProgress(0)
-		// Create full pack
+
 		const fullPack: Record<string, Uint8Array> = {
 			'assets/minecraft/sounds/mob/horse/death.ogg': mainAudio,
 			'pack.mcmeta': createPackMeta(songName, composerName)
@@ -305,6 +321,50 @@ export class AppController {
 		}
 		this.updateProgress(30)
 		// Create charter packs
+		const charterPacks: Record<string, Record<string, Uint8Array>> = await this.createCharterPacks(getSegment, songName, composerName)
+		this.updateProgress(60)
+		// Create ZIP files
+		let charter_count = await this.createZipPacks(fullPack, songName, charterPacks)
+
+
+		// Upload texture packs
+		this.updateProgress(0)
+		if (location.hostname === 'localhost' && songName === 'test') {
+			this.statusDiv.textContent = '测试模式，跳过上传'
+			this.updateProgress(100)
+			return
+		} else {
+			this.statusDiv.textContent = '正在上传材质包...'
+		}
+
+		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player', charter_count)
+		this.updateProgress(50)
+
+		await this.uploadPartPacks(charter_count, hash)
+
+		const result = this.showResultCode(songName, composerName, hash, length)
+		this.statusDiv.textContent = `使用 /editor create ${result} 来创建该谱面。`
+		this.updateProgress(100)
+
+		this.statusDiv.textContent = '处理并上传完成!'
+		this.updateProgress(100)
+	}
+
+	private async getAudioDuration() {
+		if (!this.audioFile) {
+			this.statusDiv.textContent = '错误：没有音频文件'
+			return 0;
+		}
+
+		this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在计算音频时长...`
+		this.updateProgress(0)
+		const duration = await getAudioDuration(this.audioFile, this.ffmpeg)
+		const length = Math.floor(duration * 20) // Convert to ticks
+		this.updateProgress(100)
+		return length
+	}
+
+	private async createCharterPacks(getSegment: (index: number) => Promise<Uint8Array | null>, songName: string, composerName: string) {
 		const charterPacks: Record<string, Record<string, Uint8Array>> = {}
 		let segmentCount = 0
 
@@ -324,54 +384,45 @@ export class AppController {
 			charterPacks[`part-${partNum}`] = charterPack
 			segmentCount++
 		}
-		this.updateProgress(60)
-		// Create ZIP files
-		step++
-		this.statusDiv.textContent = `(${step}/${totalSteps}) 正在创建ZIP文件...`
-		this.fullZipBlob = await createZip(fullPack, `${songName}.zip`)
-		let charter_count = Object.entries(charterPacks).length
-		const partZips = await Promise.all(
-			Object.entries(charterPacks).map(([name, files]) =>
-				createZip(files, `${name}.zip`),
-			)
-		)
-		partZips.forEach((zip, i) => {
-			const partNum = i + 1
-			this.statusDiv.textContent = `(${step}/${totalSteps}) 正在创建ZIP文件... (${i+1}/${charter_count})`
-			this.updateProgress(60+40/charter_count*(i+1))
-			this.charterZipBlobs[`part-${partNum}`] = zip
-		})
-		this.updateProgress(100)
+		return charterPacks
+	}
 
-
-		// Upload texture packs
-		this.statusDiv.textContent = '正在上传材质包...'
-		if(location.hostname === 'localhost' && songName === 'test') {
-			this.statusDiv.textContent = '测试模式，跳过上传'
-			return
-		}
-		this.updateProgress(0)
-		const hash = await this.uploadTexturePack(this.fullZipBlob!, 'player',charter_count)
-		this.updateProgress(50)
-		// Upload charter packs
-		await Promise.all(
-			Object.entries(this.charterZipBlobs).map(([name, blob]) => {
-				const partNum = parseInt(name.split('-')[1])
-				this.statusDiv.textContent = `正在上传材质包... ${partNum}/${charter_count}`
-				this.updateProgress(50+ 50/charter_count*partNum)
-				return this.uploadTexturePack(blob, 'charter', partNum, hash)
-			})
-		)
-		// Output result
+	private showResultCode(songName: string, composerName: string, hash: string, length: number) {
 		const encoder = new TextEncoder()
 		const encodedName = btoa(String.fromCharCode(...encoder.encode(songName)))
 		const encodedComposer = btoa(String.fromCharCode(...encoder.encode(composerName)))
 		const result = `${hash}:${length}:${encodedName}:${encodedComposer}`
 
-		this.resultDiv.textContent = result
-		this.statusDiv.textContent = `使用 /editor create ${result} 来创建该谱面。`
+		return result
+	}
+
+	private async uploadPartPacks(charter_count: number, hash: string) {
+		await Promise.all(
+			Object.entries(this.charterZipBlobs).map(([name, blob]) => {
+				const partNum = parseInt(name.split('-')[1])
+				this.statusDiv.textContent = `正在上传材质包... ${partNum}/${charter_count}`
+				this.updateProgress(50 + 50 / charter_count * partNum)
+				return this.uploadTexturePack(blob, 'charter', partNum, hash)
+			})
+		)
+	}
+
+	private async createZipPacks(fullPack: Record<string, Uint8Array<ArrayBufferLike>>, songName: string, charterPacks: Record<string, Record<string, Uint8Array<ArrayBufferLike>>>) {
+		this.step++
+		this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在创建ZIP文件...`
+		this.fullZipBlob = await createZip(fullPack, `${songName}.zip`)
+		let charter_count = Object.entries(charterPacks).length
+		const partZips = await Promise.all(
+			Object.entries(charterPacks).map(([name, files]) => createZip(files, `${name}.zip`)
+			)
+		)
+		partZips.forEach((zip, i) => {
+			const partNum = i + 1
+			this.statusDiv.textContent = `(${this.step}/${this.totalSteps}) 正在创建ZIP文件... (${i + 1}/${charter_count})`
+			this.updateProgress(60 + 40 / charter_count * (i + 1))
+			this.charterZipBlobs[`part-${partNum}`] = zip
+		})
 		this.updateProgress(100)
-		this.statusDiv.textContent = '处理并上传完成!'
-		this.updateProgress(100)
+		return charter_count
 	}
 }
