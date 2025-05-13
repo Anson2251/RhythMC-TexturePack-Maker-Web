@@ -70,18 +70,24 @@ async function convertToOgg(ffmpeg: FFmpeg, file: File): Promise<void> {
 }
 
 export async function extractCoverArt(ffmpeg: FFmpeg): Promise<Uint8Array | null> {
-	try {
-		await ffmpeg.exec([
-			'-i', 'input',
-			'-map', '0:v',
-			'-vframes', '1',
-			'-y',
-			'cover.png'
-		])
-		return await ffmpeg.readFile('cover.png') as Uint8Array
-	} catch {
-		return null
-	}
+    try {
+        console.log('Extracting album art from metadata...')
+        
+        // 使用 -an 跳过音频流，直接提取嵌入的图片
+        await ffmpeg.exec([
+            '-i', 'input',
+            '-an',                 // 忽略音频
+            '-vcodec', 'copy',     // 直接复制图像数据不重新编码
+            '-y',
+            'cover.png'
+        ])
+        
+        console.log('Cover art extracted successfully')
+        return await ffmpeg.readFile('cover.png') as Uint8Array
+    } catch(e) {
+        console.error('Failed to extract cover art:', e)
+        return null
+    }
 }
 
 async function processMainAudio(ffmpeg: FFmpeg): Promise<Uint8Array> {
