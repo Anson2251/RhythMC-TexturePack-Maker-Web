@@ -216,7 +216,7 @@ export class AppController {
 			this.statusDiv.textContent = '请选择一个音频文件'
 			return
 		}
-		this.ffmpeg.writeFile('input', await fetchFile(this.audioFileInput.files![0]))
+		await this.ffmpeg.writeFile('input', await fetchFile(this.audioFileInput.files![0]))
 		const coverArt = await extractCoverArt(this.ffmpeg)
 		if (coverArt) {
 			const blob = new Blob([coverArt], { type: 'image/png' })
